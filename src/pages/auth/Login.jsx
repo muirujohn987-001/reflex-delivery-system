@@ -51,8 +51,8 @@ export default function Login({ startFlipped = false }) {
     const guess = /dispatch/i.test(loginData.identifier)
       ? ROLES.DISPATCHER
       : /rider|david/i.test(loginData.identifier)
-      ? ROLES.RIDER
-      : ROLES.RETAILER;
+        ? ROLES.RIDER
+        : ROLES.RETAILER;
     const user = await login({ role: guess });
     showToast(`Welcome back, ${user.name}`);
     navigate(ROLE_HOME[user.role]);
@@ -69,7 +69,7 @@ export default function Login({ startFlipped = false }) {
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-gray-50 px-4 py-8 sm:px-6">
       <div className="flip-scene w-full max-w-4xl">
-        <div className={`flip-card relative ${flipped ? "flipped" : ""}`}>
+        <div className={`flip-card relative min-h-[680px] sm:min-h-[620px] ${flipped ? "flipped" : ""}`}>
           {/* FRONT: split login */}
           <div className="flip-face relative grid overflow-hidden rounded-2xl bg-white shadow-card-hover md:grid-cols-2">
             <BrandPanel />

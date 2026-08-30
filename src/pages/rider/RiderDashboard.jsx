@@ -1,24 +1,32 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Phone, MapPin, Package } from "lucide-react";
+import { Phone, MapPin, Package, Flag } from "lucide-react";
 import RiderLayout from "../../components/layout/RiderLayout";
 import StatusBadge from "../../components/ui/StatusBadge";
 import Button from "../../components/ui/Button";
 import EmptyState from "../../components/ui/EmptyState";
+import ReportIssueModal from "../../components/delivery/ReportIssueModal";
 import { useDeliveries } from "../../context/DeliveryContext";
 import { useAuth } from "../../hooks/useAuth";
+import { useToast } from "../../components/ui/Toast";
 import { PackageSearch } from "lucide-react";
 
 export default function RiderDashboard() {
   const { deliveries } = useDeliveries();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [tab, setTab] = useState("mine");
+  const [reportOpen, setReportOpen] = useState(false);
   const navigate = useNavigate();
 
   // Demo: "mine" = the first assigned/picked-up delivery, "other" = the rest assigned to this rider.
   const myDeliveries = deliveries.filter((d) => ["ASSIGNED", "PICKED_UP"].includes(d.status) && d.rider?.name === "David Mwangi");
   const active = myDeliveries[0];
   const later = myDeliveries.slice(1);
+
+  const handleReport = (deliveryId, reason) => {
+    showToast("Issue reported to dispatcher");
+  };
 
   return (
     <RiderLayout>
@@ -30,17 +38,15 @@ export default function RiderDashboard() {
       <div className="mt-5 flex gap-1 border-b border-gray-100">
         <button
           onClick={() => setTab("mine")}
-          className={`px-3 pb-2.5 text-sm font-semibold transition-colors ${
-            tab === "mine" ? "border-b-2 border-maroon-500 text-maroon-500" : "text-gray-400"
-          }`}
+          className={`px-3 pb-2.5 text-sm font-semibold transition-colors ${tab === "mine" ? "border-b-2 border-maroon-500 text-maroon-500" : "text-gray-400"
+            }`}
         >
           My Delivery
         </button>
         <button
           onClick={() => setTab("other")}
-          className={`px-3 pb-2.5 text-sm font-semibold transition-colors ${
-            tab === "other" ? "border-b-2 border-maroon-500 text-maroon-500" : "text-gray-400"
-          }`}
+          className={`px-3 pb-2.5 text-sm font-semibold transition-colors ${tab === "other" ? "border-b-2 border-maroon-500 text-maroon-500" : "text-gray-400"
+            }`}
         >
           Other Deliveries
         </button>
@@ -82,6 +88,14 @@ export default function RiderDashboard() {
                   Scan QR Code
                 </Button>
               )}
+
+              <button
+                onClick={() => setReportOpen(true)}
+                className="mx-auto mt-4 flex min-h-[40px] items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-red-500"
+              >
+                <Flag className="h-3.5 w-3.5" aria-hidden="true" />
+                Report an issue
+              </button>
             </div>
           ) : (
             <EmptyState icon={PackageSearch} title="No active delivery" description="You're all caught up for now." />
@@ -103,6 +117,8 @@ export default function RiderDashboard() {
           </div>
         )}
       </div>
+
+      <ReportIssueModal open={reportOpen} onClose={() => setReportOpen(false)} delivery={active} onSubmit={handleReport} />
     </RiderLayout>
   );
 }

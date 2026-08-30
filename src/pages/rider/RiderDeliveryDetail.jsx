@@ -1,16 +1,25 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Phone, MapPin, Package, ArrowLeft } from "lucide-react";
+import { Phone, MapPin, Package, ArrowLeft, Flag } from "lucide-react";
 import RiderLayout from "../../components/layout/RiderLayout";
 import StatusBadge from "../../components/ui/StatusBadge";
 import Button from "../../components/ui/Button";
 import EmptyState from "../../components/ui/EmptyState";
+import ReportIssueModal from "../../components/delivery/ReportIssueModal";
 import { useDeliveries } from "../../context/DeliveryContext";
+import { useToast } from "../../components/ui/Toast";
 
 export default function RiderDeliveryDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getDelivery } = useDeliveries();
+  const { showToast } = useToast();
+  const [reportOpen, setReportOpen] = useState(false);
   const delivery = getDelivery(id);
+
+  const handleReport = (deliveryId, reason) => {
+    showToast("Issue reported to dispatcher");
+  };
 
   return (
     <RiderLayout>
@@ -50,8 +59,18 @@ export default function RiderDeliveryDetail() {
               Scan QR Code
             </Button>
           )}
+
+          <button
+            onClick={() => setReportOpen(true)}
+            className="mx-auto mt-4 flex min-h-[40px] items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-red-500"
+          >
+            <Flag className="h-3.5 w-3.5" aria-hidden="true" />
+            Report an issue
+          </button>
         </div>
       )}
+
+      <ReportIssueModal open={reportOpen} onClose={() => setReportOpen(false)} delivery={delivery} onSubmit={handleReport} />
     </RiderLayout>
   );
 }
