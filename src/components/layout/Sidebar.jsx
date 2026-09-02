@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
-import { Truck, LogOut, X } from "lucide-react";
+import { X } from "lucide-react";
+import Logo from "../ui/Logo";
 
 export default function Sidebar({ items, open = false, onClose, dark = false }) {
   return (
@@ -19,13 +20,8 @@ export default function Sidebar({ items, open = false, onClose, dark = false }) 
           lg:static lg:z-0 lg:w-64 lg:translate-x-0 lg:shadow-none
           ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="flex items-center justify-between px-5 py-6">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10">
-              <Truck className="h-5 w-5 text-white" aria-hidden="true" />
-            </div>
-            <span className="text-lg font-bold tracking-tight">REFLEX</span>
-          </div>
+        <div className="flex items-start justify-between px-5 py-6">
+          <Logo size={40} showTagline taglineClassName="text-white/70" />
           <button onClick={onClose} aria-label="Close menu" className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 lg:hidden">
             <X className="h-5 w-5" />
           </button>

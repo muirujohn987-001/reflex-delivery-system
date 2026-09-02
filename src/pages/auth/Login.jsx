@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Truck, Mail, Lock, User, Phone, ShieldCheck } from "lucide-react";
+import { Mail, Lock, User, Phone, ShieldCheck } from "lucide-react";
 import Input from "../../components/ui/Input";
 import Select from "../../components/ui/Select";
 import Button from "../../components/ui/Button";
+import Logo from "../../components/ui/Logo";
 import { useAuth } from "../../hooks/useAuth";
 import { useToast } from "../../components/ui/Toast";
 import { ROLE_HOME, ROLES } from "../../utils/constants";
@@ -71,7 +72,10 @@ export default function Login({ startFlipped = false }) {
       <div className="flip-scene w-full max-w-4xl">
         <div className={`flip-card relative min-h-[680px] sm:min-h-[620px] ${flipped ? "flipped" : ""}`}>
           {/* FRONT: split login */}
-          <div className="flip-face relative grid overflow-hidden rounded-2xl bg-white shadow-card-hover md:grid-cols-2">
+          <div
+            className={`flip-face relative grid overflow-hidden rounded-2xl bg-white shadow-card-hover md:grid-cols-2
+              ${flipped ? "pointer-events-none" : "pointer-events-auto"}`}
+          >
             <BrandPanel />
             <div className="flex flex-col justify-center px-6 py-10 sm:px-10 md:py-14">
               <h1 className="text-2xl font-extrabold text-ink">Welcome back</h1>
@@ -128,7 +132,10 @@ export default function Login({ startFlipped = false }) {
           </div>
 
           {/* BACK: registration */}
-          <div className="flip-face flip-face-back absolute inset-0 grid overflow-hidden rounded-2xl bg-white shadow-card-hover md:grid-cols-2">
+          <div
+            className={`flip-face flip-face-back absolute inset-0 grid overflow-hidden rounded-2xl bg-white shadow-card-hover md:grid-cols-2
+              ${flipped ? "pointer-events-auto" : "pointer-events-none"}`}
+          >
             <BrandPanel compact />
             <div className="flex flex-col justify-center overflow-y-auto px-6 py-8 sm:px-10">
               <h1 className="text-2xl font-extrabold text-ink">Create Account</h1>
@@ -199,42 +206,28 @@ export default function Login({ startFlipped = false }) {
 
 function BrandPanel({ compact = false }) {
   return (
-    <div className="relative hidden flex-col justify-between overflow-hidden bg-maroon-500 px-10 py-12 text-white md:flex">
-      {/* subtle building silhouettes */}
-      <svg className="pointer-events-none absolute inset-x-0 bottom-0 h-40 w-full text-white/5" viewBox="0 0 400 160" preserveAspectRatio="none" aria-hidden="true">
-        <rect x="0" y="60" width="50" height="100" fill="currentColor" />
-        <rect x="60" y="30" width="40" height="130" fill="currentColor" />
-        <rect x="110" y="80" width="55" height="80" fill="currentColor" />
-        <rect x="175" y="10" width="45" height="150" fill="currentColor" />
-        <rect x="230" y="50" width="60" height="110" fill="currentColor" />
-        <rect x="300" y="70" width="50" height="90" fill="currentColor" />
-        <rect x="355" y="20" width="45" height="140" fill="currentColor" />
-      </svg>
-
-      <div className="relative z-10 flex items-center gap-2.5">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10">
-          <Truck className="h-5.5 w-5.5" aria-hidden="true" />
-        </div>
-        <span className="text-xl font-bold tracking-tight">REFLEX</span>
+    <div className="relative hidden flex-col overflow-hidden bg-maroon-500 px-10 py-12 text-white md:flex">
+      <div className="relative z-10">
+        <Logo size={64} showTagline taglineClassName="text-white/80" />
       </div>
 
       {!compact && (
-        <div className="relative z-10">
+        <div className="relative z-10 mt-8">
           <p className="text-2xl font-bold leading-snug">Smart Delivery Coordination</p>
-          <p className="mt-3 max-w-xs text-sm text-white/70">
+          <p className="mt-3 max-w-xs text-sm text-white/80">
             Connect retailers, dispatchers and riders on one platform built for speed and reliability.
           </p>
         </div>
       )}
 
-      <div className="relative z-10">
-        {!compact && (
-          <div className="mb-8 flex justify-center">
-            <div className="relative flex h-28 w-40 items-center justify-center rounded-2xl bg-white/10">
-              <Truck className="h-14 w-14 text-white/90" aria-hidden="true" />
-            </div>
-          </div>
-        )}
+      {/* Truck fills all remaining space, including the area where the building silhouettes used to sit */}
+      {!compact && (
+        <div className="absolute inset-x-0 bottom-0 top-[36%] z-0 flex items-end justify-center px-6 pb-16">
+          <img src="/truck.png" alt="Delivery truck" className="max-h-full w-full max-w-md object-contain object-bottom" />
+        </div>
+      )}
+
+      <div className="absolute bottom-3 left-30 right-0 z-10 mt-6">
         <p className="text-xs text-white/50">REFLEX &copy; {new Date().getFullYear()}</p>
       </div>
     </div>
