@@ -1,14 +1,26 @@
-app.use('/api/auth', authRoutes);
-const express = require("express");
-const cors = require("cors");
+const express = require('express');
+const cors = require('cors');
 
-const healthRoutes = require("./routes/health.routes");
+const healthRoutes = require('./routes/health.routes');
+const authRoutes = require('./routes/auth.routes');
+
+const { notFound, errorHandler } = require('./middleware/Errorhandler');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-app.use("/health", healthRoutes);
+// Health
+app.use('/health', healthRoutes);
+
+// Authentication
+app.use('/api/auth', authRoutes);
+
+// 404 handler
+app.use(notFound);
+
+// Global error handler — MUST be LAST
+app.use(errorHandler);
 
 module.exports = app;

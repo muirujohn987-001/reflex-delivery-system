@@ -10,7 +10,7 @@ VALUES
         'Jane Wanjiku',
         'jane.retailer@reflex.test',
         '+254712345678',
-       '$2b$10$SKupd9ID4bXbi2fx9OSSHu.4Fbqh9c1ev9Q20CaeTp7e1h56X8HF.'
+       ' $2b$10$bAgV658U4gCr3yAXXE8V6./8KD/2l0I6v4LWNz6ls1hhUoSq16qlS'
 ,
         'RETAILER'
     ),
@@ -18,14 +18,14 @@ VALUES
         'Brian Otieno',
         'brian.dispatcher@reflex.test',
         '+254723456789',
-        '$2b$10$SKupd9ID4bXbi2fx9OSSHu.4Fbqh9c1ev9Q20CaeTp7e1h56X8HF.',
+        '$2b$10$bAgV658U4gCr3yAXXE8V6./8KD/2l0I6v4LWNz6ls1hhUoSq16qlS',
         'DISPATCHER'
     ),
     (
         'Kevin Mwangi',
         'kevin.rider@reflex.test',
         '+254734567890',
-        '$2b$10$SKupd9ID4bXbi2fx9OSSHu.4Fbqh9c1ev9Q20CaeTp7e1h56X8HF.',
+        '$2b$10$bAgV658U4gCr3yAXXE8V6./8KD/2l0I6v4LWNz6ls1hhUoSq16qlS',
       'RIDER'
     )
 ON CONFLICT (email) DO NOTHING;
