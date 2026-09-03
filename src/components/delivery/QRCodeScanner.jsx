@@ -1,28 +1,62 @@
-import { QrCode } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { Html5QrcodeScanner } from "html5-qrcode";
+
+const CONTAINER_ID = "reflex-qr-reader";
 
 /**
- * Presentational QR scanner viewport. Wire up a camera library
- * (e.g. html5-qrcode or @zxing/browser) by rendering its <video>
- * element inside this component in place of the placeholder below.
+ * Live camera QR scanner using html5-qrcode's built-in widget.
+ * It renders its own "Request Camera Permissions" button (a required
+ * user click, which avoids browsers silently blocking auto-started
+ * camera requests) plus a camera-picker dropdown if more than one
+ * camera is available. Calls onScanSuccess(text) once, then stops.
  */
-export default function QRCodeScanner({ scanning = true }) {
+export default function QRCodeScanner({ active = true, onScanSuccess, onError }) {
+  const scannerRef = useRef(null);
+  const initialized = useRef(false);
+
+  useEffect(() => {
+    if (!active) return undefined;
+    if (initialized.current) return undefined;
+    initialized.current = true;
+
+    const scanner = new Html5QrcodeScanner(
+      CONTAINER_ID,
+      { fps: 10, qrbox: 240, rememberLastUsedCamera: true },
+      /* verbose */ false
+    );
+    scannerRef.current = scanner;
+
+    scanner.render(
+      (decodedText) => {
+        scanner.clear().catch(() => { });
+        onScanSuccess?.(decodedText);
+      },
+      (err) => {
+        // Fires continuously while no QR code is in frame — this is
+        // normal, not a real error, so just forward it if the caller
+        // wants to inspect it (they usually won't).
+        onError?.(err);
+      }
+    );
+
+    return () => {
+      const instance = scannerRef.current;
+      if (instance) {
+        instance.clear().catch(() => { });
+      }
+      initialized.current = false;
+    };
+  }, [active, onScanSuccess, onError]);
+
   return (
-    <div className="relative mx-auto aspect-square w-full max-w-[320px] overflow-hidden rounded-2xl bg-ink">
-      <div className="absolute inset-0 flex items-center justify-center">
-        <QrCode className="h-16 w-16 text-white/10" aria-hidden="true" />
-      </div>
-
-      {/* Corner markers */}
-      <div className="absolute inset-6">
-        <span className="absolute left-0 top-0 h-8 w-8 rounded-tl-xl border-l-4 border-t-4 border-teal-400" />
-        <span className="absolute right-0 top-0 h-8 w-8 rounded-tr-xl border-r-4 border-t-4 border-teal-400" />
-        <span className="absolute bottom-0 left-0 h-8 w-8 rounded-bl-xl border-b-4 border-l-4 border-teal-400" />
-        <span className="absolute bottom-0 right-0 h-8 w-8 rounded-br-xl border-b-4 border-r-4 border-teal-400" />
-
-        {scanning && (
-          <span className="absolute inset-x-0 top-0 h-0.5 animate-scanLine bg-teal-400 shadow-[0_0_8px_2px_rgba(0,140,149,0.8)]" aria-hidden="true" />
-        )}
-      </div>
+    <div className="mx-auto w-full max-w-[320px]">
+      <div
+        id={CONTAINER_ID}
+        className="overflow-hidden rounded-2xl text-ink
+          [&_video]:rounded-2xl
+          [&_select]:min-h-[38px] [&_select]:rounded-lg [&_select]:border [&_select]:border-gray-200 [&_select]:px-2 [&_select]:text-sm
+          [&_button]:min-h-[40px] [&_button]:rounded-xl [&_button]:bg-teal-500 [&_button]:px-4 [&_button]:py-2 [&_button]:text-sm [&_button]:font-semibold [&_button]:text-white [&_button]:transition-colors hover:[&_button]:bg-teal-600"
+      />
     </div>
   );
 }
