@@ -1,16 +1,41 @@
-require('dotenv').config();
-const express = require('express');
-const authRoutes = require('./routes/Auth-routes'); 
-const { errorHandler, notFound } = require('./middleware/Errorhandler'); 
+
+require("dotenv").config();
+
+const express = require("express");
+const cors = require("cors");
+
+const confirmationRoutes = require("./routes/confirmation.routes");
+const deliveryRoutes = require("./routes/delivery.routes");
+const healthRoutes = require("./routes/health.routes");
+
+const { errorHandler, notFound } = require("./middleware/Errorhandler");
 
 const app = express();
+
+// Allow frontend running on port 3000
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
 app.use(express.json());
 
-// Mount Auth routes
-app.use('/api/auth', authRoutes);[cite: 10]
+// Health check
+app.use("/api/health", healthRoutes);
 
-// Centralized error handling (must be mounted after routes)[cite: 10]
-app.use(notFound);[cite: 10]
-app.use(errorHandler);[cite: 10]
+// Delivery routes
+app.use("/api/deliveries", deliveryRoutes);
 
-app.listen(3000, () => console.log('Server running on port 3000'));
+// Delivery confirmation route
+app.use("/api/deliveries", confirmationRoutes);
+
+// 404 handler
+app.use(notFound);
+
+// Centralized error handler
+app.use(errorHandler);
+
+module.exports = app;

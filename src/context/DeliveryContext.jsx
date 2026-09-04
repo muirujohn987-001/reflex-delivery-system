@@ -1,90 +1,171 @@
-import { createContext, useContext, useState, useCallback } from "react";
-import { mockDeliveries, mockRiders } from "../utils/mockData";
+
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
+
+import { mockRiders } from "../utils/mockData";
+import { api } from "../services/api";
 
 const DeliveryContext = createContext(null);
 
-let nextId = 1046;
+function mapDelivery(row) {
+  const createdTime = row.created_at
+    ? new Date(row.created_at).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
+
+  const updatedTime = row.updated_at
+    ? new Date(row.updated_at).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
+
+  return {
+    // IMPORTANT: this is now the real PostgreSQL UUID
+    id: row.id,
+
+    riderId: row.rider_id,
+
+    status: row.current_status,
+
+    updated: updatedTime,
+
+    customer: {
+      name: "Customer",
+      phone: "",
+      address: "",
+    },
+
+    item: "Delivery",
+
+    rider: row.rider_id
+      ? {
+          id: row.rider_id,
+          name: "Assigned Rider",
+          phone: "",
+        }
+      : null,
+
+    timeline: [
+      {
+        status: "CREATED",
+        time: createdTime,
+        label: "Delivery created",
+      },
+      {
+        status: "ASSIGNED",
+        time: null,
+        label: "Rider assigned",
+      },
+      {
+        status: "PICKED_UP",
+        time: null,
+        label: "Package collected",
+      },
+      {
+        status: "DELIVERED",
+        time: null,
+        label: "Delivery confirmed",
+      },
+    ],
+  };
+}
 
 export function DeliveryProvider({ children }) {
-  const [deliveries, setDeliveries] = useState(mockDeliveries);
+  const [deliveries, setDeliveries] = useState([]);
   const [riders, setRiders] = useState(mockRiders);
+  const [loading, setLoading] = useState(true);
 
-  const createDelivery = useCallback((data) => {
-    const id = String(nextId++);
-    const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    const delivery = {
-      id,
-      customer: {
-        name: data.customerName,
-        phone: data.customerPhone,
-        address: data.address,
-      },
-      item: data.item,
-      status: "REQUESTED",
-      updated: time,
-      rider: null,
-      timeline: [
-        { status: "REQUESTED", time, label: "Delivery created" },
-        { status: "ASSIGNED", time: null, label: "Rider assigned" },
-        { status: "PICKED_UP", time: null, label: "Package collected" },
-        { status: "DELIVERED", time: null, label: "Awaiting confirmation" },
-      ],
-    };
-    setDeliveries((prev) => [delivery, ...prev]);
-    return delivery;
+  const loadDeliveries = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      const data = await api.getDeliveries();
+
+      const rows = Array.isArray(data)
+        ? data
+        : data?.deliveries || data?.data || [];
+
+      setDeliveries(rows.map(mapDelivery));
+    } catch (error) {
+      console.error("Failed to load deliveries:", error);
+      setDeliveries([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const assignRider = useCallback((deliveryId, riderId) => {
-    const rider = riders.find((r) => r.id === riderId);
-    if (!rider) return;
-    const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    setDeliveries((prev) =>
-      prev.map((d) =>
-        d.id === deliveryId
-          ? {
-              ...d,
-              status: "ASSIGNED",
-              rider: { name: rider.name, phone: rider.phone },
-              updated: time,
-              timeline: d.timeline.map((t) => (t.status === "ASSIGNED" ? { ...t, time } : t)),
-            }
-          : d
-      )
-    );
-  }, [riders]);
+  useEffect(() => {
+    loadDeliveries();
+  }, [loadDeliveries]);
 
-  const advanceStatus = useCallback((deliveryId, status) => {
-    const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    setDeliveries((prev) =>
-      prev.map((d) =>
-        d.id === deliveryId
-          ? {
-              ...d,
-              status,
-              updated: time,
-              timeline: d.timeline.map((t) => (t.status === status ? { ...t, time } : t)),
-            }
-          : d
-      )
-    );
-  }, []);
+  const createDelivery = useCallback(
+    async (data) => {
+      const delivery = await api.createDelivery(data);
 
-  const getDelivery = useCallback((id) => deliveries.find((d) => d.id === id), [deliveries]);
+      await loadDeliveries();
+
+      return delivery;
+    },
+    [loadDeliveries]
+  );
+
+  const assignRider = useCallback(
+    async (deliveryId, riderId) => {
+      await api.assignRider(deliveryId, riderId);
+
+      await loadDeliveries();
+    },
+    [loadDeliveries]
+  );
+
+  const advanceStatus = useCallback(
+    async (deliveryId, status) => {
+      await api.updateStatus(deliveryId, status);
+
+      await loadDeliveries();
+    },
+    [loadDeliveries]
+  );
+
+  const getDelivery = useCallback(
+    (id) => deliveries.find((d) => d.id === id),
+    [deliveries]
+  );
 
   const value = {
     deliveries,
     riders,
+    loading,
     createDelivery,
     assignRider,
     advanceStatus,
     getDelivery,
+    refreshDeliveries: loadDeliveries,
   };
 
-  return <DeliveryContext.Provider value={value}>{children}</DeliveryContext.Provider>;
+  return (
+    <DeliveryContext.Provider value={value}>
+      {children}
+    </DeliveryContext.Provider>
+  );
 }
 
 export function useDeliveries() {
   const ctx = useContext(DeliveryContext);
-  if (!ctx) throw new Error("useDeliveries must be used within DeliveryProvider");
+
+  if (!ctx) {
+    throw new Error(
+      "useDeliveries must be used within DeliveryProvider"
+    );
+  }
+
   return ctx;
 }
