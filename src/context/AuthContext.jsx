@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback } from "react";
-import { mockUsers } from "../utils/mockData";
+import { api } from "../services/api";
 
 const AuthContext = createContext(null);
 
@@ -7,35 +7,73 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Simulated authentication — swap for a real API call later.
-  const login = useCallback(({ role }) => {
+  const login = useCallback(async ({ identifier, password }) => {
     setLoading(true);
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const matched = mockUsers.find((u) => u.role === role) || mockUsers[0];
-        setUser(matched);
-        setLoading(false);
-        resolve(matched);
-      }, 600);
-    });
+
+    try {
+      const data = await api.login({
+        email: identifier,
+        password,
+      });
+
+      const token = data?.data?.token || data?.token;
+      const loggedInUser = data?.data?.user || data?.user;
+
+      if (!token || !loggedInUser) {
+        throw new Error("Invalid login response from server");
+      }
+
+      localStorage.setItem("reflex_token", token);
+      localStorage.setItem("reflex_user", JSON.stringify(loggedInUser));
+
+      setUser(loggedInUser);
+
+      return loggedInUser;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const register = useCallback(({ fullName, role }) => {
+  const register = useCallback(async (registerData) => {
     setLoading(true);
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const newUser = { id: `u_${Date.now()}`, name: fullName, role };
-        setUser(newUser);
-        setLoading(false);
-        resolve(newUser);
-      }, 600);
-    });
+
+    try {
+      const data = await api.register({
+        name: registerData.fullName,
+        email: registerData.email,
+        phone: registerData.phone,
+        password: registerData.password,
+        role: registerData.role,
+      });
+
+      const createdUser = data?.data?.user || data?.user;
+
+      if (!createdUser) {
+        throw new Error("Invalid registration response from server");
+      }
+
+      return createdUser;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const logout = useCallback(() => setUser(null), []);
+  const logout = useCallback(() => {
+    localStorage.removeItem("reflex_token");
+    localStorage.removeItem("reflex_user");
+    setUser(null);
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        register,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -43,6 +81,10 @@ export function AuthProvider({ children }) {
 
 export function useAuthContext() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuthContext must be used within AuthProvider");
+
+  if (!ctx) {
+    throw new Error("useAuthContext must be used within AuthProvider");
+  }
+
   return ctx;
 }

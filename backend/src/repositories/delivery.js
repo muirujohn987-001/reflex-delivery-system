@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { generateQRToken } = require('../services/qr.service');
 
 async function createDelivery({
   retailerId,
@@ -7,6 +8,8 @@ async function createDelivery({
   deliveryAddress,
   itemDescription
 }) {
+  const { rawToken, tokenHash } = generateQRToken();
+
   const { rows } = await pool.query(
     `INSERT INTO deliveries
       (
@@ -15,20 +18,25 @@ async function createDelivery({
         customer_phone,
         delivery_address,
         item_description,
-        current_status
+        current_status,
+        qr_token_hash
       )
-     VALUES ($1, $2, $3, $4, $5, 'REQUESTED')
+     VALUES ($1, $2, $3, $4, $5, 'REQUESTED', $6)
      RETURNING *`,
     [
       retailerId,
       customerName,
       customerPhone,
       deliveryAddress,
-      itemDescription
+      itemDescription,
+      tokenHash
     ]
   );
 
-  return rows[0];
+  return {
+    ...rows[0],
+    qr_token: rawToken
+  };
 }
 
 async function createInitialStatus(deliveryId, userId) {
@@ -42,7 +50,8 @@ async function createInitialStatus(deliveryId, userId) {
 
 async function findById(id) {
   const { rows } = await pool.query(
-    `SELECT * FROM deliveries WHERE id = $1`,
+    `SELECT * FROM deliveries
+     WHERE id = $1`,
     [id]
   );
 
@@ -122,6 +131,117 @@ async function getHistory(deliveryId) {
   return rows;
 }
 
+async function findRider(riderId) {
+  const { rows } = await pool.query(
+    `SELECT id, name, email, phone
+     FROM users
+     WHERE id = $1
+       AND role = 'RIDER'
+       AND is_active = TRUE`,
+    [riderId]
+  );
+
+  return rows[0] || null;
+}
+
+async function assignDelivery(deliveryId, dispatcherId, riderId) {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const { rows } = await client.query(
+      `UPDATE deliveries
+       SET rider_id = $1,
+           current_status = 'ASSIGNED',
+           updated_at = NOW()
+       WHERE id = $2
+         AND current_status = 'REQUESTED'
+       RETURNING *`,
+      [riderId, deliveryId]
+    );
+
+    const delivery = rows[0];
+
+    if (!delivery) {
+      throw new Error(
+        'Delivery not found or is no longer in REQUESTED status'
+      );
+    }
+
+    await client.query(
+      `INSERT INTO assignments
+       (delivery_id, dispatcher_id, rider_id)
+       VALUES ($1, $2, $3)`,
+      [deliveryId, dispatcherId, riderId]
+    );
+
+    await client.query(
+      `INSERT INTO status_updates
+       (delivery_id, updated_by, status, note)
+       VALUES ($1, $2, 'ASSIGNED', $3)`,
+      [
+        deliveryId,
+        dispatcherId,
+        `Assigned to rider ${riderId}`
+      ]
+    );
+
+    await client.query('COMMIT');
+
+    return delivery;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function updateStatus(deliveryId, userId, status, note) {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const { rows } = await client.query(
+      `UPDATE deliveries
+       SET current_status = $1,
+           updated_at = NOW()
+       WHERE id = $2
+       RETURNING *`,
+      [status, deliveryId]
+    );
+
+    const delivery = rows[0];
+
+    if (!delivery) {
+      throw new Error('Delivery not found');
+    }
+
+    await client.query(
+      `INSERT INTO status_updates
+       (delivery_id, updated_by, status, note)
+       VALUES ($1, $2, $3, $4)`,
+      [
+        deliveryId,
+        userId,
+        status,
+        note || null
+      ]
+    );
+
+    await client.query('COMMIT');
+
+    return delivery;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   pool,
   createDelivery,
@@ -132,5 +252,8 @@ module.exports = {
   findByRider,
   findOpen,
   findAvailableRiders,
-  getHistory
+  getHistory,
+  findRider,
+  assignDelivery,
+  updateStatus
 };

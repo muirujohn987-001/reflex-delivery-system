@@ -66,7 +66,6 @@ async function getDelivery(req, res) {
 async function getAllDeliveries(req, res) {
   try {
     const deliveries = await deliveryService.getAllDeliveries();
-
     res.json(deliveries);
   } catch (error) {
     console.error(error);
@@ -80,7 +79,6 @@ async function getAllDeliveries(req, res) {
 async function getOpenDeliveries(req, res) {
   try {
     const deliveries = await deliveryService.getOpenDeliveries();
-
     res.json(deliveries);
   } catch (error) {
     console.error(error);
@@ -94,7 +92,6 @@ async function getOpenDeliveries(req, res) {
 async function getAvailableRiders(req, res) {
   try {
     const riders = await deliveryService.getAvailableRiders();
-
     res.json(riders);
   } catch (error) {
     console.error(error);
@@ -121,11 +118,96 @@ async function getDeliveryHistory(req, res) {
   }
 }
 
+async function assignDelivery(req, res) {
+  try {
+    const { riderId } = req.body;
+
+    if (!riderId) {
+      return res.status(400).json({
+        error: 'riderId is required'
+      });
+    }
+
+    const delivery = await deliveryService.assignDelivery(
+      req.params.id,
+      req.user.id,
+      riderId
+    );
+
+    res.json({
+      message: 'Delivery assigned successfully',
+      delivery
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(400).json({
+      error: error.message
+    });
+  }
+}
+
+async function updateDeliveryStatus(req, res) {
+  try {
+    const { status, note } = req.body;
+
+    if (!status) {
+      return res.status(400).json({
+        error: 'status is required'
+      });
+    }
+
+    const delivery = await deliveryService.updateStatus(
+      req.params.id,
+      req.user.id,
+      status,
+      note
+    );
+
+    res.json({
+      message: 'Delivery status updated successfully',
+      delivery
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(400).json({
+      error: error.message
+    });
+  }
+}
+
+async function cancelDelivery(req, res) {
+  try {
+    const { note } = req.body;
+
+    const delivery = await deliveryService.cancelDelivery(
+      req.params.id,
+      req.user.id,
+      note
+    );
+
+    res.json({
+      message: 'Delivery cancelled successfully',
+      delivery
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(400).json({
+      error: error.message
+    });
+  }
+}
+
 module.exports = {
   createDelivery,
   getDelivery,
   getAllDeliveries,
   getOpenDeliveries,
   getAvailableRiders,
-  getDeliveryHistory
+  getDeliveryHistory,
+  assignDelivery,
+  updateDeliveryStatus,
+  cancelDelivery
 };

@@ -6,21 +6,80 @@ const {
   getAllDeliveries,
   getOpenDeliveries,
   getAvailableRiders,
-  getDeliveryHistory
+  getDeliveryHistory,
+  assignDelivery,
+  updateDeliveryStatus,
+  cancelDelivery
 } = require('../controllers/deliveryController');
+
+const { authenticate } = require('../middleware/Auth');
+const { requireRole } = require('../middleware/Role');
 
 const router = express.Router();
 
-router.post('/', createDelivery);
+// Create delivery
+router.post(
+  '/',
+  authenticate,
+  requireRole('RETAILER'),
+  createDelivery
+);
 
-router.get('/', getAllDeliveries);
+// View deliveries
+router.get(
+  '/',
+  authenticate,
+  getAllDeliveries
+);
 
-router.get('/open', getOpenDeliveries);
+router.get(
+  '/open',
+  authenticate,
+  requireRole('DISPATCHER'),
+  getOpenDeliveries
+);
 
-router.get('/riders', getAvailableRiders);
+router.get(
+  '/riders',
+  authenticate,
+  requireRole('DISPATCHER'),
+  getAvailableRiders
+);
 
-router.get('/:id', getDelivery);
+router.get(
+  '/:id',
+  authenticate,
+  getDelivery
+);
 
-router.get('/:id/history', getDeliveryHistory);
+router.get(
+  '/:id/history',
+  authenticate,
+  getDeliveryHistory
+);
+
+// Dispatcher assigns rider
+router.post(
+  '/:id/assign',
+  authenticate,
+  requireRole('DISPATCHER'),
+  assignDelivery
+);
+
+// Rider updates status
+router.post(
+  '/:id/status',
+  authenticate,
+  requireRole('RIDER'),
+  updateDeliveryStatus
+);
+
+// Retailer/dispatcher can cancel
+router.post(
+  '/:id/cancel',
+  authenticate,
+  requireRole('RETAILER', 'DISPATCHER'),
+  cancelDelivery
+);
 
 module.exports = router;
